@@ -1,13 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using PatientSky.Data;
-using PatientSky.Models;
+﻿using Microsoft.AspNetCore.Mvc;
 using PatientSky.Models.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using PatientSky.Extensions;
+using PatientSky.Services;
 
 namespace PatientSky.Controllers
 {
@@ -15,90 +8,37 @@ namespace PatientSky.Controllers
     [ApiController]
     public class ApointmentController : ControllerBase
     {
-        private readonly AppDbContext _db = new AppDbContext();
+
+        private readonly AppointmentService _apointmentService;
+
+        public ApointmentController(AppointmentService apointmentService)
+        {
+            _apointmentService = apointmentService;
+        }
 
 
         /// <summary>
-        /// Endpoint for requesting available meetings
+        /// Get available appointments
         /// </summary>
-        /// <param name="apointmentCheck"></param>
+        /// <param name="appointmentCheckDTO"></param>
         /// <returns></returns>
+
         [HttpPost]
-        [Route("GetAvailable")]
-        public IActionResult GetAvailableMeetings(ApointmentCheckDTO apointmentCheck)
+        [Route("Available")]
+        public IActionResult AvailableDoctors(AppointmentCheckDTO appointmentCheckDTO)
         {
-            // minimal duration you can request is 15 min
-            if (apointmentCheck.Duration < 14)
-                return BadRequest("Minimal time you can request is 15 min");
-
-            List<AvailableTimeModelDTO> availableTimes = new List<AvailableTimeModelDTO>();
-
-            List<DoctorDTO> doctors = new List<DoctorDTO>();
-           
-            foreach(var calendarId in apointmentCheck.CalendarId)
-            {
-                List<Appointment> apointments = new List<Appointment>();
-
-                // if calendarId does not exist inside doctor list, add that doctor to a list ( saving so that we can loop through small list instead of accessing database all the time )
-                if (!doctors.Any(x => x.CalendarId == calendarId))
-                {
-                    var doctor = _db.Doctors.FirstOrDefault(x => x.CalendarId == calendarId);
-                    doctors.Add(new DoctorDTO { FirstName = doctor.FirstName, LastName = doctor.LastName, CalendarId = calendarId });
-                }
-
-                // get apoitments using calendarid and order them from lower time to higher time
-                if (calendarId != null)
-                {
-                    apointments = _db.Apointments.Where(x => x.CalendarId == calendarId).OrderBy(x=>x.Start).ToList();
-                }
-
-                DateTime previousApointmentEndTime = new DateTime();
-
-                
-                foreach(var apointment in apointments)
-                {
-                        // Check if its new day and add first apointment end time to the previousApointment
-                    if (previousApointmentEndTime.Day != apointment.Start.Day)
-                    {
-                        previousApointmentEndTime = apointment.End;
-                    }
-                    else if(apointment.Start.Day == previousApointmentEndTime.Day)
-                    {
-
-                        int minutesLastApointmentEnd = previousApointmentEndTime.Hour * 60 + previousApointmentEndTime.Minute;
-                        int minutesThisApointmentStart = apointment.Start.Hour * 60 + apointment.Start.Minute;
-                      
-                        // Extension on int to give back timespan
-                        DateTime availableToTime = apointment.Start.Add(-apointmentCheck.Duration.MinutesToTimeSpan());
-
-                        if(minutesThisApointmentStart - minutesLastApointmentEnd >= apointmentCheck.Duration)
-                        {
-                            var doctor = doctors.FirstOrDefault(x => x.CalendarId == apointment.CalendarId);
-
-                            availableTimes.Add(new AvailableTimeModelDTO { Doctor = new DoctorDTO { FirstName = doctor.FirstName, LastName = doctor.LastName, CalendarId = doctor.CalendarId},
-                                AvailableFromTime = previousApointmentEndTime, AvailableToTime=availableToTime, DoctorsNextMeeting=apointment.Start,  RequestedTimeWithDoctor=apointmentCheck.Duration});
-
-                        }
-                        //saving this apoitment end time to previousApoitment time for next time it loops
-                        previousApointmentEndTime = apointment.End;
-
-                    }
-
-                    
-                    
 
 
-                }
+            if (appointmentCheckDTO.Duration <= 14)
+                return BadRequest("Minimal duration time with doctor is 15 minutes");
 
+            var takenAppoitments = _apointmentService.GetTakenAppointments(appointmentCheckDTO.Start, appointmentCheckDTO.End, appointmentCheckDTO.CalendarId);
 
+            var timeSlots = _apointmentService.GetTimeslotsInTimePeriod(appointmentCheckDTO.CalendarId, appointmentCheckDTO.Start, appointmentCheckDTO.End, appointmentCheckDTO.Duration);
 
+            var freeAppointments = _apointmentService.GetAvailableAppointments(takenAppoitments, timeSlots, appointmentCheckDTO.Duration);
 
-            }
-
-           
-            
-
-            return Ok(availableTimes);
+            return Ok(freeAppointments);
         }
     }
 }

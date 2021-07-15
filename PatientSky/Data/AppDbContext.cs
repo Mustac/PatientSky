@@ -13,6 +13,7 @@ namespace PatientSky.Data
     {
         public List<Appointment> Apointments { get; set; }
         public List<Patient> Patients { get; set; }
+        public List<TimeSlot> TimeSlots { get; set; }
         public List<Doctor> Doctors { get; set; } 
 
         // Trying to simulate Entity Framework
@@ -21,7 +22,7 @@ namespace PatientSky.Data
         {
 
 
-            // Getting Appoitments directory and parsing them to List of Appointments
+            // Getting Appoitments directory and parsing them to List 
 
             string jsonApoitmentsFile = File.ReadAllText(Directory.GetCurrentDirectory() + "\\PatientsSkyData\\Appoitments.json");
 
@@ -29,13 +30,16 @@ namespace PatientSky.Data
 
 
 
-
-            // Getting Patients directory and parsing them to List of Patients
-            
+            // Getting Patients directory and parsing them to List 
             string jsonPatientsFile = File.ReadAllText(Directory.GetCurrentDirectory() + "\\PatientsSkyData\\Patients.json");
-            
-
             Dictionary<string, Patient> patientsDictionary = JsonConvert.DeserializeObject<Dictionary<string,Patient>>(jsonPatientsFile);
+
+
+
+            // Getting Timeslots directory and parsing it to List
+            string jsonTimeSlotsFile = File.ReadAllText(Directory.GetCurrentDirectory() + "\\PatientsSkyData\\TimeSlots.json");
+            TimeSlots = JsonConvert.DeserializeObject<List<TimeSlot>>(jsonTimeSlotsFile);
+            
 
             Patients = new List<Patient>();
 

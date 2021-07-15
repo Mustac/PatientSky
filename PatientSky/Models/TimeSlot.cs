@@ -1,13 +1,9 @@
 ﻿using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace PatientSky.Models
 {
-
-    public class Timeslot
+    public class TimeSlot
     {
         [JsonProperty("id")]
         public string Id { get; set; }
@@ -30,6 +26,4 @@ namespace PatientSky.Models
         [JsonProperty("out_of_office")]
         public bool OutOfOffice { get; set; }
     }
-
-
 }
