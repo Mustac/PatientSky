@@ -12,7 +12,6 @@ namespace PatientSky.Data
     public class AppDbContext
     {
         public List<Appointment> Apointments { get; set; }
-        public List<Patient> Patients { get; set; }
         public List<TimeSlot> TimeSlots { get; set; }
         public List<Doctor> Doctors { get; set; } 
 
@@ -21,7 +20,6 @@ namespace PatientSky.Data
         public AppDbContext()
         {
 
-
             // Getting Appoitments directory and parsing them to List 
 
             string jsonApoitmentsFile = File.ReadAllText(Directory.GetCurrentDirectory() + "\\PatientsSkyData\\Appoitments.json");
@@ -29,36 +27,9 @@ namespace PatientSky.Data
             Apointments = JsonConvert.DeserializeObject<List<Appointment>>(jsonApoitmentsFile);
 
 
-
-            // Getting Patients directory and parsing them to List 
-            string jsonPatientsFile = File.ReadAllText(Directory.GetCurrentDirectory() + "\\PatientsSkyData\\Patients.json");
-            Dictionary<string, Patient> patientsDictionary = JsonConvert.DeserializeObject<Dictionary<string,Patient>>(jsonPatientsFile);
-
-
-
             // Getting Timeslots directory and parsing it to List
             string jsonTimeSlotsFile = File.ReadAllText(Directory.GetCurrentDirectory() + "\\PatientsSkyData\\TimeSlots.json");
             TimeSlots = JsonConvert.DeserializeObject<List<TimeSlot>>(jsonTimeSlotsFile);
-            
-
-            Patients = new List<Patient>();
-
-            foreach (var patient in patientsDictionary)
-            {
-
-                Patients.Add(new Patient()
-                {
-                    PatientId = patient.Key,
-                    BirthDate = patient.Value.BirthDate,
-                    Contacts = patient.Value.Contacts,
-                    Firstname = patient.Value.Firstname,
-                    Gender = patient.Value.Gender,
-                    Lastname = patient.Value.Lastname,
-                    Middlename = patient.Value.Middlename,
-                    PersonalId = patient.Value.PersonalId
-                });   
-            }
-
             
             Doctors = new List<Doctor>();
             Doctors.Add(new Doctor { CalendarId = "48644c7a-975e-11e5-a090-c8e0eb18c1e9", FirstName="Joanna", LastName="Hef" });
