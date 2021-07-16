@@ -36,7 +36,7 @@ namespace PatientSky.Controllers
 
             var timeSlots = _apointmentService.GetTimeslotsInTimePeriod(appointmentCheckDTO.CalendarId, appointmentCheckDTO.Start, appointmentCheckDTO.End, appointmentCheckDTO.Duration);
 
-            var freeAppointments = _apointmentService.GetAvailableAppointments(takenAppoitments, timeSlots, appointmentCheckDTO.Duration);
+            var freeAppointments = _apointmentService.GetAvailableAppointments(appointmentCheckDTO.Start, appointmentCheckDTO.End, takenAppoitments, timeSlots, appointmentCheckDTO.Duration);
 
             return Ok(freeAppointments);
         }

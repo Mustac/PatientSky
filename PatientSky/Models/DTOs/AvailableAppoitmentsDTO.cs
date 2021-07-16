@@ -8,7 +8,6 @@ namespace PatientSky.Models.DTOs
     public class AvailableAppointmentDTO
     {
         public Doctor Doctor { get; set; }
-        public int RequestedTimeWithDoctor { get; set; }
         public AvailableTimeModelDTO AvailableDateTime { get; set; }
         public List<TimeSlot> TimeSlots { get; set; }
         
@@ -16,6 +15,7 @@ namespace PatientSky.Models.DTOs
 
     public class AvailableTimeModelDTO
     {
+        public int RequestedTimeWithDoctor { get; set; }
         public DateTime AvailableFromTime { get; set; }
         public DateTime AvailableToTime { get; set; }
         public DateTime DoctorUnavailableFrom { get; set; }

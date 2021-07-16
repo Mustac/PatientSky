@@ -27,111 +27,72 @@ namespace PatientSky.Services
                 .Join(_db.Doctors, x => x.CalendarId, y => y.CalendarId, (appointment, doctor) => new TakenAppointmentDTO { Appointment = appointment, Doctor = doctor })
                 .Where(x => x.Appointment.Start >= start && x.Appointment.End <= end).OrderBy(x => x.Doctor.CalendarId).ThenBy(x => x.Appointment.Start).ToList();
 
-         
+
             return doctorAppointmentsDTOs;
 
         }
 
-        public List<TimeSlot> GetTimeslotsInTimePeriod(List<string> calendarIds ,DateTime fromDate, DateTime toDate, int duration)
+        public List<TimeSlot> GetTimeslotsInTimePeriod(List<string> calendarIds, DateTime fromDate, DateTime toDate, int duration)
         {
             TimeSpan durationSpan = new TimeSpan(0, duration, 0);
 
-            List<TimeSlot> timeSlots = _db.TimeSlots.Where(x => x.Start >= fromDate && x.End <= toDate).Where(x =>x.End - x.Start >= durationSpan).Where(x=> calendarIds.Contains(x.CalendarId)).OrderBy(x=>x.CalendarId).ThenBy(x=>x.Start).ToList();
-
-
-            // 
+            List<TimeSlot> timeSlots = _db.TimeSlots.Where(x => x.Start >= fromDate && x.End <= toDate)
+                .Where(x => calendarIds.Contains(x.CalendarId))
+                .OrderBy(x => x.CalendarId).ThenBy(x => x.Start).ToList();
 
             return timeSlots;
         }
 
-
-        /// <summary>
-        /// Used for getting available appointments from List of TakenAppoitnemt object and duration
-        /// </summary>
-        /// <param name="takenAppointments"></param>
-        /// <param name="duration"></param>
-        /// <returns>List of AvailableAppoitnemtnDTO</returns>
-        public List<AvailableAppointmentDTO> GetAvailableAppointments(List<TakenAppointmentDTO> takenAppointments, List<TimeSlot> timeSlots, int duration)
+        public List<AvailableAppointmentDTO> GetAvailableAppointments(DateTime start, DateTime end, List<TakenAppointmentDTO> takenAppointmentDTO, List<TimeSlot> timeSlots, int durration)
         {
-            DateTime dayCheck = new DateTime();
-            DateTime fromTime = new DateTime();
-            DateTime toTime = new DateTime();
+            List<AvailableAppointmentDTO> availableAppointmentsDTO = new List<AvailableAppointmentDTO>();
 
-            TimeSpan durationSpan = new TimeSpan(0, duration, 0);
+            TimeSpan requestedMeetingDuration = new TimeSpan(0, durration, 0);
 
-            List<AvailableAppointmentDTO> availableAppointmentDTOs = new List<AvailableAppointmentDTO>();
+            bool firstPass = true;
 
-            // getting datetime from start of available time and saving it to fromTime, and end to toTime. Calculating if endtime - starttime is bigger than required duration
-            // if it is save that object to availableAppointmentsDTOs
-
-            foreach(var takenAppointment in takenAppointments)
+            foreach(var takenAppointment in takenAppointmentDTO)
             {
-                // checking if tineSaved.day is equal to current appointment day
-                // = if it is equal we are not in the same day 
-                // != if it is not equal that means this appointment is in the new day 
-
-               
-                if (dayCheck.Day != takenAppointment.Appointment.Start.Day)
+                if (firstPass)
                 {
-                    // looping once per new day
-                    // work hours start at 8:00h. Setting fromTime to this date 8:00h
+                    firstPass = false;
+                    start = start < DateTime.Parse($"{start.Year}-{start.Month}-{start.Day}T08:00:00") ? DateTime.Parse($"{start.Year}-{start.Month}-{start.Day}T08:00:00"):start;
 
-                    fromTime = new DateTime(takenAppointment.Appointment.Start.Year, takenAppointment.Appointment.Start.Month, takenAppointment.Appointment.Start.Day, 8, 0, 0);
-                    toTime = takenAppointment.Appointment.Start;
-
-
-                    // setting day to this appointment day so this wont loop unless it is a new day
-                    dayCheck = takenAppointment.Appointment.Start;
-
+                    if(takenAppointment.Appointment.Start - start >= requestedMeetingDuration)
+                    {
+                        List<TimeSlot> slots = timeSlots.GetAvailableTimeSlots(takenAppointment.Appointment.CalendarId, start, takenAppointment.Appointment.Start);
+                        availableAppointmentsDTO.Add(CreateAvailableAppointment(start, takenAppointment.Appointment.Start, requestedMeetingDuration, takenAppointment.Doctor, slots));
+                    }
                 } 
 
 
-                if (CheckIfAppointmentIsAvailable(fromTime, toTime, durationSpan))
-                {
-                    List<TimeSlot> timeSlotsInThisPeriod = timeSlots.Where(x => x.Start >= fromTime && x.End <= toTime)
-                                                                    .Where(x=>x.CalendarId == takenAppointment.Appointment.CalendarId).ToList();
-
-                    availableAppointmentDTOs.Add(CreateAvailableAppointment(takenAppointment, fromTime, toTime, durationSpan, timeSlotsInThisPeriod));
-                }
 
             }
 
-            return availableAppointmentDTOs;
 
-
-
+            return availableAppointmentsDTO;
         }
 
 
-        private bool CheckIfAppointmentIsAvailable(DateTime fromTime, DateTime toTime, TimeSpan duration)
+        private AvailableAppointmentDTO CreateAvailableAppointment(DateTime fromTime, DateTime toTime, TimeSpan meetingDuration, Doctor doctor, List<TimeSlot> slots) 
         {
-            if (toTime - fromTime < duration)
-                return false;
 
-            return true;
-
-        }
-
-
-        private AvailableAppointmentDTO CreateAvailableAppointment(TakenAppointmentDTO takenAppointment, DateTime fromTime, DateTime toTime, TimeSpan duration, List<TimeSlot> timeSlots)
-        {
-            AvailableAppointmentDTO availableAppointmentDTO = new AvailableAppointmentDTO
+            AvailableAppointmentDTO availableAppointment = new AvailableAppointmentDTO
             {
-                RequestedTimeWithDoctor = duration.Minutes,
-                Doctor = takenAppointment.Doctor,
+                Doctor = doctor,
                 AvailableDateTime = new AvailableTimeModelDTO
                 {
                     AvailableFromTime = fromTime,
-                    AvailableToTime = toTime - duration,
-                    DoctorUnavailableFrom = toTime
+                    AvailableToTime = toTime - meetingDuration,
+                    DoctorUnavailableFrom = toTime,
+                    RequestedTimeWithDoctor = (int)meetingDuration.TotalMinutes
                 },
-                TimeSlots = timeSlots
+                TimeSlots = slots
             };
 
-            return availableAppointmentDTO;
-
-            
+            return availableAppointment;
         }
-
+   
     }
 }
+            
